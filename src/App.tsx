@@ -9,6 +9,8 @@ import Reviews from './components/Reviews';
 import Contact from './components/Contact';
 import CartDrawer from './components/CartDrawer';
 import Footer from './components/Footer';
+import Offers from './components/Offers';
+import AdminPanel from './components/AdminPanel';
 
 import { BUSINESS_DETAILS, TESTIMONIALS } from './data';
 import { CartItem, MenuItem, Testimonial } from './types';
@@ -19,6 +21,9 @@ export default function App() {
   const [cartOpen, setCartOpen] = useState(false);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(TESTIMONIALS);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Simple client-side routing for /admin
+  const isAdmin = window.location.pathname === '/admin';
 
   // Monitoring scroll pos to show floating stickies
   useEffect(() => {
@@ -108,6 +113,12 @@ export default function App() {
     scrollToSection('menu');
   };
 
+  // ── Admin Route ───────────────────────────────────────────────────
+  if (isAdmin) {
+    return <AdminPanel />;
+  }
+
+  // ── Main Website ──────────────────────────────────────────────────
   return (
     <div className="relative min-h-screen flex flex-col justify-between selection:bg-gold-200 selection:text-gold-950" id="main-application-wrap">
       {/* Structural Header Navigation */}
@@ -124,6 +135,9 @@ export default function App() {
 
         {/* ABOUT US SECTION */}
         <AboutUs />
+
+        {/* ✅ SPECIAL OFFERS SECTION — shows only when offers exist */}
+        <Offers />
 
         {/* MENU SECTION */}
         <Menu onAddToCart={handleAddToCart} />
