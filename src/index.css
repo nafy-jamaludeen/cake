@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --color-gold-50: #fefcf6;
+  --color-gold-100: #faf2dd;
+  --color-gold-200: #f4e3ba;
+  --color-gold-300: #ebd08d;
+  --color-gold-400: #dead5a;
+  --color-gold-500: #cea243;
+  --color-gold-600: #ad7c2e;
+  --color-gold-700: #8c5d21;
+  --color-gold-800: #6e461b;
+  --color-gold-900: #553416;
+  --color-gold-950: #331c0a;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--color-gold-50);
+    color: var(--color-gold-950);
+    overflow-x: hidden;
+  }
+
+  /* Custom glassmorphism classes */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+  
+  .glass-input {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(206, 162, 67, 0.2);
+  }
+
+  .glass-input:focus {
+    border-color: rgba(206, 162, 67, 0.8);
+    box-shadow: 0 0 0 2px rgba(206, 162, 67, 0.2);
+  }
+  
+  .glass-header {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(206, 162, 67, 0.1);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-gold-50);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-gold-300);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-400);
+}
+
+/* Smooth custom keyframe animations */
+@keyframes delicate-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: delicate-float 4s ease-in-out infinite;
+}

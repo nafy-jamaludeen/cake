@@ -1,0 +1,6 @@
+{
+  "name": "Golden Cakes & Bakes",
+  "description": "Premium cake shop and bakery in Kottakkal, Kerala featuring delicious custom cakes, takeaways, and local deliveries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
