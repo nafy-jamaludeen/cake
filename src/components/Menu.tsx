@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Star, ShoppingBag, Check, ChevronDown, Plus, MessageSquare } from 'lucide-react';
 import { MENU_ITEMS } from '../data';
@@ -14,6 +14,46 @@ interface MenuProps {
   ) => void;
 }
 
+// ✅ Get visible products (respects hide/show from admin)
+function useVisibleProducts() {
+  const [items, setItems] = useState<MenuItem[]>([]);
+
+  useEffect(() => {
+    // Hidden original product IDs
+    const stored = localStorage.getItem('goldenCakesProductVisibility');
+    const visibility: { [id: string]: boolean } = stored ? JSON.parse(stored) : {};
+
+    // Custom products added from admin
+    const storedCustom = localStorage.getItem('goldenCakesCustomProducts');
+    const customProducts = storedCustom ? JSON.parse(storedCustom) : [];
+
+    // Filter original products
+    const visibleOriginals = MENU_ITEMS.filter((item) => visibility[item.id] !== false);
+
+    // Convert active custom products to MenuItem shape
+    const visibleCustom: MenuItem[] = customProducts
+      .filter((p: any) => p.active)
+      .map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: 'custom' as any,
+        priceRange: p.price,
+        priceMin: parseInt(p.price.replace(/[^0-9]/g, '')) || 0,
+        priceMax: parseInt(p.price.replace(/[^0-9]/g, '')) || 0,
+        isPopular: false,
+        description: p.description,
+        image: p.imageUrl,
+        rating: 5.0,
+        availableWeights: ['0.5kg', '1.0kg'],
+        flavors: ['Default'],
+      }));
+
+    setItems([...visibleOriginals, ...visibleCustom]);
+  }, []);
+
+  return items;
+}
+
 export default function Menu({ onAddToCart }: MenuProps) {
   const [selectedCategory, setSelectedCategory] = useState<'all' | MenuItem['category']>('all');
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
@@ -25,10 +65,13 @@ export default function Menu({ onAddToCart }: MenuProps) {
   const [qty, setQty] = useState(1);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
+  // ✅ Use visible products instead of MENU_ITEMS directly
+  const allItems = useVisibleProducts();
+
   // Filter items
   const filteredItems = selectedCategory === 'all'
-    ? MENU_ITEMS
-    : MENU_ITEMS.filter(item => item.category === selectedCategory);
+    ? allItems
+    : allItems.filter(item => item.category === selectedCategory);
 
   const categories = [
     { id: 'all', label: 'All Bakery Gems' },
@@ -41,7 +84,7 @@ export default function Menu({ onAddToCart }: MenuProps) {
   const handleStartCustomizing = (item: MenuItem) => {
     setCustomizingItem(item);
     setSelectedWeight(item.availableWeights[0]);
-    setSelectedFlavor(item.flavors[0]);
+    setSelectedFlavor(item.flavors[0] || '');
     setCustomWriting('');
     setQty(1);
   };
@@ -49,18 +92,14 @@ export default function Menu({ onAddToCart }: MenuProps) {
   const handleConfirmAdd = () => {
     if (!customizingItem) return;
     
-    // Perform adding action to cart state
     onAddToCart(customizingItem, selectedWeight, selectedFlavor, customWriting, qty);
     
-    // Display sweet micro-toast success
     setSuccessToast(`${customizingItem.name} added to order list!`);
     setTimeout(() => setSuccessToast(null), 3000);
 
-    // Reset customize modal container State
     setCustomizingItem(null);
   };
 
-  // Helper to dynamically estimate total depending on weight selection
   const calculateEstimatedPrice = (item: MenuItem, weight: string) => {
     let base = item.priceMin;
     if (weight === '1.0kg' || weight === 'Box of 6') {
@@ -132,14 +171,12 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   
-                  {/* Popular badge */}
                   {item.isPopular && (
                     <div id={`badge-popular-${item.id}`} className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-gold-600 text-white text-[10px] font-sans uppercase font-bold tracking-widest px-3 py-1 rounded-full shadow-sm flex items-center gap-1">
                       <span>Popular Choice</span>
                     </div>
                   )}
 
-                  {/* Rating Bubble overlay */}
                   <div id={`rating-bubble-${item.id}`} className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-xs py-1 px-2.5 rounded-lg flex items-center gap-1 border border-stone-100 shadow-sm">
                     <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                     <span className="text-xs font-bold text-stone-800">{item.rating}</span>
@@ -163,7 +200,6 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     {item.description}
                   </p>
 
-                  {/* Specifications details mini checklist */}
                   <div id={`features-pills-${item.id}`} className="flex flex-wrap gap-1.5 mt-5 pb-5 border-b border-stone-100 w-full">
                     <span className="text-[10px] font-sans bg-stone-50 text-stone-500 px-2.5 py-1 rounded-md border border-stone-200/60">
                       🍰 Fresh Baked
@@ -173,7 +209,6 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     </span>
                   </div>
 
-                  {/* Add to order cart action bottom layout */}
                   <div id={`menu-card-action-wrap-${item.id}`} className="flex items-center justify-between w-full pt-4">
                     <button
                       id={`customize-btn-${item.id}`}
@@ -191,7 +226,7 @@ export default function Menu({ onAddToCart }: MenuProps) {
           </AnimatePresence>
         </div>
 
-        {/* Customization Modal / Dialog */}
+        {/* Customization Modal */}
         <AnimatePresence>
           {customizingItem && (
             <div id="customize-modal-overlay" className="fixed inset-0 z-50 overflow-y-auto bg-stone-950/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -202,8 +237,6 @@ export default function Menu({ onAddToCart }: MenuProps) {
                 exit={{ opacity: 0, scale: 0.95, y: 15 }}
                 className="bg-white w-full max-w-lg rounded-3xl overflow-hidden border border-gold-200 shadow-2xl text-left"
               >
-                
-                {/* Header Banner representing selected cake */}
                 <div id="modal-banner-img" className="relative h-44 sm:h-52 bg-stone-100">
                   <img
                     id="modal-selected-cake-img"
@@ -212,11 +245,7 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover"
                   />
-                  
-                  {/* Backdrop shading */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-6" id="modal-image-overlay" />
-                  
-                  {/* Title labels overlay */}
                   <div id="modal-title-wrap" className="absolute bottom-5 left-6 right-6 text-white">
                     <span id="modal-cake-cat" className="text-[10px] font-sans tracking-widest uppercase text-gold-300 font-bold">
                       {customizingItem.category} Delights
@@ -225,8 +254,6 @@ export default function Menu({ onAddToCart }: MenuProps) {
                       {customizingItem.name}
                     </h3>
                   </div>
-
-                  {/* Close button top right */}
                   <button
                     id="modal-close-cross"
                     onClick={() => setCustomizingItem(null)}
@@ -236,21 +263,18 @@ export default function Menu({ onAddToCart }: MenuProps) {
                   </button>
                 </div>
 
-                {/* Form fields layout container */}
                 <div id="modal-form-body" className="p-6 sm:p-7 space-y-5">
                   <p id="modal-cake-desc-short" className="text-stone-500 font-sans text-xs sm:text-sm">
                     {customizingItem.description}
                   </p>
 
                   <div className="grid grid-cols-2 gap-4" id="modal-specs-grid">
-                    {/* Weight options */}
                     <div id="modal-weight-selector-wrap" className="space-y-1.5 text-left">
                       <label className="text-xs font-bold text-stone-700 tracking-wide uppercase font-sans">
                         Size / Weight
                       </label>
-                      <div className="relative" id="weight-dropdown-cell">
+                      <div className="relative">
                         <select
-                          id="weight-dropdown"
                           value={selectedWeight}
                           onChange={(e) => setSelectedWeight(e.target.value)}
                           className="w-full bg-stone-50 text-stone-800 font-sans text-sm py-2.5 pl-3.5 pr-8 rounded-xl border border-stone-200 outline-none focus:border-gold-500 focus:bg-white transition-all appearance-none cursor-pointer"
@@ -263,14 +287,12 @@ export default function Menu({ onAddToCart }: MenuProps) {
                       </div>
                     </div>
 
-                    {/* Flavor options */}
                     <div id="modal-flavor-selector-wrap" className="space-y-1.5 text-left">
                       <label className="text-xs font-bold text-stone-700 tracking-wide uppercase font-sans">
                         Gourmet Flavor
                       </label>
-                      <div className="relative" id="flavor-dropdown-cell">
+                      <div className="relative">
                         <select
-                          id="flavor-dropdown"
                           value={selectedFlavor}
                           onChange={(e) => setSelectedFlavor(e.target.value)}
                           className="w-full bg-stone-50 text-stone-800 font-sans text-sm py-2.5 pl-3.5 pr-8 rounded-xl border border-stone-200 outline-none focus:border-gold-500 focus:bg-white transition-all appearance-none cursor-pointer"
@@ -284,17 +306,15 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     </div>
                   </div>
 
-                  {/* Lettering / custom text written on top of the cake */}
                   <div id="modal-lettering-wrap" className="space-y-1.5 text-left">
-                    <div className="flex justify-between items-center" id="lettering-label-row">
+                    <div className="flex justify-between items-center">
                       <label className="text-xs font-bold text-stone-700 tracking-wide uppercase font-sans flex items-center gap-1">
                         <MessageSquare className="w-3.5 h-3.5 text-gold-600" />
                         <span>Writing on Cake</span>
                       </label>
-                      <span className="text-[10px] text-stone-400 font-sans font-medium" id="lettering-character-note">Optional</span>
+                      <span className="text-[10px] text-stone-400 font-sans font-medium">Optional</span>
                     </div>
                     <input
-                      id="cake-writing-input"
                       type="text"
                       maxLength={32}
                       value={customWriting}
@@ -304,57 +324,39 @@ export default function Menu({ onAddToCart }: MenuProps) {
                     />
                   </div>
 
-                  {/* Quantity selector and Estimated summary pricing */}
-                  <div className="flex items-center justify-between pt-4 border-t border-stone-100" id="modal-summary-line">
-                    
-                    {/* Quantity selectors */}
-                    <div className="space-y-1 text-left" id="modal-qty-manager">
+                  <div className="flex items-center justify-between pt-4 border-t border-stone-100">
+                    <div className="space-y-1 text-left">
                       <label className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block font-sans">
                         Quantity
                       </label>
-                      <div className="flex items-center gap-1 mt-1 bg-stone-100 p-1 rounded-lg" id="modal-qty-control-row">
+                      <div className="flex items-center gap-1 mt-1 bg-stone-100 p-1 rounded-lg">
                         <button
-                          id="qty-decrement-btn"
                           disabled={qty <= 1}
                           onClick={() => setQty(prev => Math.max(1, prev - 1))}
                           className="w-7 h-7 bg-white hover:bg-stone-50 rounded text-stone-600 font-bold border border-stone-200/50 flex items-center justify-center disabled:opacity-40"
-                        >
-                          -
-                        </button>
-                        <span className="w-8 text-center text-sm font-bold text-stone-800 font-mono" id="modal-qty-txt">
-                          {qty}
-                        </span>
+                        >-</button>
+                        <span className="w-8 text-center text-sm font-bold text-stone-800 font-mono">{qty}</span>
                         <button
-                          id="qty-increment-btn"
                           onClick={() => setQty(prev => prev + 1)}
                           className="w-7 h-7 bg-white hover:bg-stone-50 rounded text-stone-600 font-bold border border-stone-200/50 flex items-center justify-center"
-                        >
-                          +
-                        </button>
+                        >+</button>
                       </div>
                     </div>
 
-                    {/* Calculated estimated price indicator */}
-                    <div className="text-right" id="modal-price-calc-indicator">
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block font-sans font-semibold leading-none">Estimated Price</p>
-                      <p className="text-2xl font-black font-sans text-gold-800 mt-1" id="modal-calculated-total">
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block font-sans leading-none">Estimated Price</p>
+                      <p className="text-2xl font-black font-sans text-gold-800 mt-1">
                         ₹{calculateEstimatedPrice(customizingItem, selectedWeight) * qty}
                       </p>
                     </div>
-
                   </div>
 
-                  {/* Actions buttons bottom dialog */}
-                  <div className="flex gap-3 pt-3" id="modal-action-buttons-wrap">
+                  <div className="flex gap-3 pt-3">
                     <button
-                      id="modal-cancel-btn"
                       onClick={() => setCustomizingItem(null)}
                       className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-600 font-sans font-semibold py-3.5 rounded-xl transition-colors text-center cursor-pointer"
-                    >
-                      Cancel
-                    </button>
+                    >Cancel</button>
                     <button
-                      id="modal-confirm-add-btn"
                       onClick={handleConfirmAdd}
                       className="flex-1 bg-gradient-to-r from-gold-600 to-gold-700 hover:from-gold-700 hover:to-gold-800 text-white font-sans font-semibold py-3.5 rounded-xl transition-all shadow-md shadow-gold-600/25 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
@@ -362,28 +364,25 @@ export default function Menu({ onAddToCart }: MenuProps) {
                       <span>Add to Order Bag</span>
                     </button>
                   </div>
-
                 </div>
-
               </motion.div>
             </div>
           )}
         </AnimatePresence>
 
-        {/* Dynamic Success micro Toast */}
+        {/* Success Toast */}
         <AnimatePresence>
           {successToast && (
             <motion.div
-              id="micro-toast-success"
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               className="fixed bottom-6 right-6 z-50 bg-stone-900 border border-gold-500/50 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3"
             >
-              <div className="bg-gold-500 text-stone-950 p-1.5 rounded-full" id="toast-icon-circle">
+              <div className="bg-gold-500 text-stone-950 p-1.5 rounded-full">
                 <Check className="w-3.5 h-3.5 text-stone-900 stroke-[3px]" />
               </div>
-              <div className="text-left" id="toast-text-wrap">
+              <div className="text-left">
                 <p className="text-xs font-semibold text-stone-300 font-sans leading-none">Perfect Addition</p>
                 <p className="text-sm font-bold text-white mt-1 leading-tight">{successToast}</p>
               </div>
